@@ -1,0 +1,47 @@
+name: Secure Workflow
+
+permissions:
+  actions: none
+  contents: read    # 仅允许读取代码
+  secrets: none     # 禁止访问Secrets
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOWED_EGRESS: "api.github.com, required-cdn.com"  # 限制出站流量
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 获取完整历史记录
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # 根据需要调整Node.js版本
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run security checks
+        run: npm run security-checks  # 假设项目中有安全检查脚本
+
+      - name: Build project
+        run: npm run build
+
+      - name: Test project
+        run: npm test
+
+      - name: Security Scan
+        uses: actions/security-scan@v1
+        with:
+          scan-type: "vulnerability"
+          report-path: "security-report.json"
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: Security Report
+          path: security-report.json
