@@ -7,13 +7,12 @@ on:
     branches: [ "main" ]
 
 # -------------------- 全局安全配置 --------------------
-# 权限最小化原则 (文档: https://docs.github.com/actions/security-guides/automatic-token-authentication)
 permissions:
-  actions: none          # 禁止操作其他 Actions
-  checks: none           # 禁止修改检查状态
-  contents: read         # 仅允许读取代码（如需上传产物需单独声明 write）
+  actions: none
+  checks: none
+  contents: read
   deployments: none
-  id-token: none         # 禁用 OIDC 令牌
+  id-token: none
   issues: none
   packages: none
   pull-requests: none
@@ -25,31 +24,33 @@ jobs:
   build:
     name: Hardened Build
     runs-on: ubuntu-latest
-    environment: production  # 关联需审批的环境
+    environment: production
 
-    # 网络出口白名单控制（需配合 GitHub Enterprise 或第三方防火墙）
     env:
       ACTIONS_ALLOWED_EGRESS: "api.github.com, pkg-registry.example.com, required-cdn.com"
-      GITHUB_TOKEN: ${{ secrets.READ_ONLY_TOKEN }}  # 使用自定义只读令牌
+      GITHUB_TOKEN: ${{ secrets.READ_ONLY_TOKEN }}
 
-    # 步骤级额外限制
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          persist-credentials: false  # 禁止遗留凭证
+          persist-credentials: false
 
+      # 关键修复：仅在 pull_request 事件中运行依赖审查
       - name: Dependency Audit
+        if: github.event_name == 'pull_request'  # 添加事件类型判断
         uses: actions/dependency-review-action@v3
+        with:
+          base-ref: ${{ github.base_ref }}  # 显式指定基准分支
+          head-ref: ${{ github.head_ref }}   # 显式指定来源分支
         env:
-          GITHUB_TOKEN: ${{ github.token }}  # 仅限此步骤使用基础令牌
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Build with Security Context
         run: |
-          # 使用非特权用户执行构建
           docker build --security-opt no-new-privileges -t app-image .
         env:
-          DOCKER_CONTENT_TRUST: 1  # 启用 Docker 内容信任
+          DOCKER_CONTENT_TRUST: 1
 
       - name: Upload Artifacts
         if: success()
@@ -57,10 +58,4 @@ jobs:
         with:
           name: build-output
           path: dist/
-          retention-days: 1  # 短期保留
-
-# -------------------- 组织级策略推荐 --------------------
-# 需在组织设置中启用:
-# 1. [Required] 分支保护规则 (Require signed commits)
-# 2. [Required] Actions 白名单 (只允许 verified creators 的 Actions)
-# 3. [Recommended] 出站网络限制 (通过 GitHub Advanced Security)
+          retention-days: 1
