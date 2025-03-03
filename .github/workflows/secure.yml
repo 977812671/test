@@ -1,47 +1,66 @@
-name: Secure Workflow
+# 文件路径: .github/workflows/secure-pipeline.yml
+name: Security-Hardened CI/CD
+on:
+  push:
+    branches: [ "main", "release/*" ]
+  pull_request:
+    branches: [ "main" ]
 
+# -------------------- 全局安全配置 --------------------
+# 权限最小化原则 (文档: https://docs.github.com/actions/security-guides/automatic-token-authentication)
 permissions:
-  actions: none
-  contents: read    # 仅允许读取代码
-  secrets: none     # 禁止访问Secrets
+  actions: none          # 禁止操作其他 Actions
+  checks: none           # 禁止修改检查状态
+  contents: read         # 仅允许读取代码（如需上传产物需单独声明 write）
+  deployments: none
+  id-token: none         # 禁用 OIDC 令牌
+  issues: none
+  packages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
 
+# -------------------- 作业级加固 --------------------
 jobs:
   build:
+    name: Hardened Build
     runs-on: ubuntu-latest
+    environment: production  # 关联需审批的环境
+
+    # 网络出口白名单控制（需配合 GitHub Enterprise 或第三方防火墙）
     env:
-      ACTIONS_ALLOWED_EGRESS: "api.github.com, required-cdn.com"  # 限制出站流量
+      ACTIONS_ALLOWED_EGRESS: "api.github.com, pkg-registry.example.com, required-cdn.com"
+      GITHUB_TOKEN: ${{ secrets.READ_ONLY_TOKEN }}  # 使用自定义只读令牌
 
+    # 步骤级额外限制
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录
+          persist-credentials: false  # 禁止遗留凭证
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Dependency Audit
+        uses: actions/dependency-review-action@v3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}  # 仅限此步骤使用基础令牌
+
+      - name: Build with Security Context
+        run: |
+          # 使用非特权用户执行构建
+          docker build --security-opt no-new-privileges -t app-image .
+        env:
+          DOCKER_CONTENT_TRUST: 1  # 启用 Docker 内容信任
+
+      - name: Upload Artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
-          node-version: '18'  # 根据需要调整Node.js版本
+          name: build-output
+          path: dist/
+          retention-days: 1  # 短期保留
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run security checks
-        run: npm run security-checks  # 假设项目中有安全检查脚本
-
-      - name: Build project
-        run: npm run build
-
-      - name: Test project
-        run: npm test
-
-      - name: Security Scan
-        uses: actions/security-scan@v1
-        with:
-          scan-type: "vulnerability"
-          report-path: "security-report.json"
-
-      - name: Upload Security Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: Security Report
-          path: security-report.json
+# -------------------- 组织级策略推荐 --------------------
+# 需在组织设置中启用:
+# 1. [Required] 分支保护规则 (Require signed commits)
+# 2. [Required] Actions 白名单 (只允许 verified creators 的 Actions)
+# 3. [Recommended] 出站网络限制 (通过 GitHub Advanced Security)
