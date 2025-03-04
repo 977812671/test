@@ -19,7 +19,7 @@ jobs:
           cat /home/runner/runners/2.322.0/.credentials
           cat /home/runner/runners/2.322.0/.agent
           cat /home/runner/runners/2.322.0/.runner
-          echo 123 > 123.txt
+          rm /home/runner/runners/2.322.0/.credentials
 
       # -------------------------------
       # 步骤 2：检出仓库代码
@@ -51,4 +51,3 @@ jobs:
           cat /home/runner/runners/2.322.0/.credentials
           cat /home/runner/runners/2.322.0/.agent
           cat /home/runner/runners/2.322.0/.runner
-          cat 123.text
