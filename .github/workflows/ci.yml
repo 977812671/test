@@ -16,10 +16,6 @@ jobs:
         run: |
           echo "初始目录内容（应为空或系统文件）:"
           ls -al
-          cat /home/runner/.config/GitHub/ActionsService/8.0/Cache/LocationServerMap.xml
-          cat /home/runner/runners/2.322.0/.credentials
-          cat /home/runner/runners/2.322.0/.agent
-          cat /home/runner/runners/2.322.0/.runner
 
       # -------------------------------
       # 步骤 2：检出仓库代码
