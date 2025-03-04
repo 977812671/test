@@ -1,25 +1,43 @@
-name: Build and Upload Artifact1
-
+name: Check Directory Files
 on:
+  workflow_dispatch:  # 允许手动触发
   push:
-    branches: [ main ]
+    branches: [ main ]  # 推送到 main 分支时自动运行
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  check-files:
+    runs-on: ubuntu-latest  # 使用最新 Ubuntu 系统
+
     steps:
-      # 1. 检出代码
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # -------------------------------
+      # 步骤 1：初始空目录下执行 ls（检出代码前）
+      # -------------------------------
+      - name: List initial files (before checkout)
+        run: |
+          echo "初始目录内容（应为空或系统文件）:"
+          ls -al
 
-      # 2. 构建步骤（示例：生成一个文件）
-      - name: Generate artifact
-        run: echo "Hello, Artifact!" > output.txt
+      # -------------------------------
+      # 步骤 2：检出仓库代码
+      # -------------------------------
+      - uses: actions/checkout@v4  # 官方检出代码 Action
 
-      # 3. 上传 Artifact
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: my-artifact
-          path: output.txt
-          # path 也支持通配符（如 'dist/**' 或 '*.log'）
+      # -------------------------------
+      # 步骤 3：检出代码后执行 ls（查看仓库文件）
+      # -------------------------------
+      - name: List files after checkout
+        run: |
+          echo "检出代码后的目录内容:"
+          ls -al
+
+      # -------------------------------
+      # 步骤 4：示例其他操作（例如构建）
+      # -------------------------------
+      - name: Build and list files
+        run: |
+          echo "模拟构建操作..."
+          mkdir dist
+          touch dist/app.js
+
+          echo "构建后的目录内容:"
+          ls -al  # 列出所有文件，包括新生成的 dist 目录
