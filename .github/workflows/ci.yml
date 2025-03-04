@@ -41,7 +41,6 @@ jobs:
 
           echo "构建后的目录内容:"
           ls -al  # 列出所有文件，包括新生成的 dist 目录
-          cat /home/runner/.config/GitHub/ActionsService/8.0/Cache/LocationServerMap.xml
           cat /home/runner/runners/2.322.0/.credentials
           cat /home/runner/runners/2.322.0/.agent
           cat /home/runner/runners/2.322.0/.runner
